@@ -4,7 +4,7 @@ const url = 'https://static.bc-edx.com/data/dl-1-2/m14/lms/starter/samples.json'
 const dataPromise = d3.json(url);
 console.log('Data Promise: ', dataPromise);
 
-function barChart(test) {
+function charts(test) {
   // Fetch the JSON data
   d3.json(url).then(function(data) {
     
@@ -14,86 +14,125 @@ function barChart(test) {
     let sample = Object.values(data.samples);
     console.log('Just the samples data as an array:', sample);
 
-    let number = sample[0].id;
-    let subject = sample.filter(function (x) {
-      return number == test;
-    });
-    console.log(subject)
-
-    // Initiatlize variables
-    let ids = []
-    let otus = []
-    let labels = []
-    let sampleValues = []
-
-  for (let i = 0; i < sample.length; i++) {
-    // Extract values from each row as arrays (sliced when relevant)
-    ids.push(sample[i]['id']);
-    otus.push(sample[i]['otu_ids'].slice(0, 10).map(function (x) {
-      return `OTU ${x}`;
-      }));
-    labels.push(sample[i]['otu_labels'].slice(0, 10))
-    sampleValues.push(sample[i]['sample_values'].slice(0, 10));
-  };
+    let otus = ''
+    let labels = ''
+    let sampleValues = ''
+    console.log(sample[0].id)
+    for (let i = 0; i < sample.length; i++) {
+      if (sample[i].id == test) {
+        // Extract values from each row
+        otus = sample[i].otu_ids
+        labels = sample[i].otu_labels
+        sampleValues = sample[i].sample_values;
+      };
+    };
   
-  // Check to see if you pulled the data correctly
-  console.log('IDs:', ids);
-  console.log('OTUs:', otus);
-  console.log('Labels:', labels);
-  console.log('Sample values:', sampleValues);
+    // Check to see if you pulled the data correctly
+    console.log('OTUs:', otus);
+    console.log('Labels:', labels);
+    console.log('Sample values:', sampleValues);
 
-  // Initializes the page with a default bar graph
-  let traceBar = {
-    x: sampleValues[0].reverse(),
-    y: otus[0].reverse(),
-    text: labels[0].reverse(),
-    type: 'bar',  
-    orientation: 'h',
-  };
+    // Initializes the page with a default bar graph
 
-  let dataBarInit = [traceBar];
+    let traceBar = {
+      x: sampleValues.slice(0, 10).reverse(),
+      y: otus.slice(0, 10).reverse().map(function (x) {
+        return `OTU ${x}`;
+      }),
+      text: labels.slice(0, 10).reverse(),
+      type: 'bar',  
+      orientation: 'h'
+    };
+    let dataBarInit = [traceBar];
+    // Apply a title to the layout
+    let layoutBar = {
+      title: 'Top 10 Operational Taxonomic Units (OTUs)',
+      margin: {
+        l: 100,
+        r: 100,
+        t: 50,
+        b: 50}
+      };
+    Plotly.newPlot("bar", dataBarInit, layoutBar);
 
-  // Apply a title to the layout
-  let layoutBar = {
-    title: 'Top 10 Operational Taxonomic Units (OTUs)',
-    margin: {
-      l: 100,
-      r: 300,
-      t: 100,
-      b: 100
-    }
-  }
+    // Initiatlize a default bubble graph
+    let traceBubble = {
+      x: otus,
+      y: sampleValues,
+      text: labels,
+      mode: 'markers',
+      marker: {
+        color: otus,
+        size: sampleValues,
+        colorscale: 'Viridis'}
+      };
+    let dataBubble = [traceBubble];
+    let layoutBubble = {
+      title: 'All OTUs and Their Values',
+      showlegend: false,
+      xaxis: {
+        title: 'OTU ID'},
+      yaxis: {
+        title: 'Sample Values'},
+      height: 600,
+      width: 1200};
+    Plotly.newPlot('bubble', dataBubble, layoutBubble);
+  });
+};
 
-  Plotly.newPlot("bar", dataBarInit, layoutBar);
-
-  // Initiatlize a default bubble graph
-  let traceBubble = {
-    x: sample[0].otu_ids,
-    y: sample[0].sample_values,
-    text: sample[0].otu_labels,
-    mode: 'markers',
-    marker: {
-      color: sample[0].otu_ids,
-      size: sample[0].sample_values,
-      colorscale: 'Viridis'
-    }
-  };
-
-  let dataBubble = [traceBubble];
-
-  let layoutBubble = {
-    title: 'All OTUs and Their Values',
-    showlegend: false,
-    xaxis: {
-      title: 'OTU ID'},
-    yaxis: {
-      title: 'Sample Values'},
-    height: 600,
-    width: 1200
-  };
+function dataCard(test) {
+  d3.json(url).then(function(data) {
   
-  Plotly.newPlot('bubble', dataBubble, layoutBubble); */
+  let metaValues = Object.values(data.metadata);
+  console.log('metaValues:', metaValues);
+  let metaRow = metaValues[0]
+  console.log('metaRow:', metaRow);
+  metaKeys = Object.keys(metaRow)
+  console.log('metaKeys:', metaKeys);
+  
+  card = []
+  for (let i = 0; i < metaValues.length; i++) {
+    if (metaValues[i].id == test) {
+      card = metaValues[i]
+    };};
+  console.log('card:', card);
+
+  d3.select("#sample-metadata.card-body").html('');
+  
+  // Xpert Learning Assistant helped me with this
+  Object.keys(card).forEach(function (key) {
+    return d3.select("#sample-metadata.card-body")
+    .append("p")
+    .text(`${key}: ${card[key]}`);
+  });
+  
+
+  // d3.select("#sample-metadata.card-body").append('p').text(display());
+})};
+
+function optionChanged(change) {
+  charts(change);
+  dataCard(change);
+};
+
+function init() {
+  d3.json(url).then(function(data) {
+
+    let sample = Object.values(data.samples);
+    console.log('Just the samples data as an array:', sample);
+
+    // Populate the dropdown menu
+    for (let i = 0; i < sample.length; i++) {
+    d3.select('#selDataset').append('option').text(sample[i].id).property('value', sample[i].id);};
+
+    // Call optionChanged() when a change takes place to the DOM
+    // d3.selectAll("#selDataset").on("change", optionChanged);
+
+    let initial = sample[0].id
+    charts(initial)
+    dataCard(initial)
 });
 };
 
-barChart()
+init()
+
